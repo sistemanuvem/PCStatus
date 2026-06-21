@@ -77,7 +77,7 @@ body{font-family:'Consolas','Courier New',monospace;background:var(--bg);
   color:var(--text);min-height:100vh;padding:20px}
 
 /* topo */
-.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;gap:12px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin:0 auto 24px;gap:12px;max-width:480px}
 .top-bar h1{color:var(--accent);font-size:1.3rem}
 .top-links{display:flex;gap:10px;align-items:center;flex-shrink:0}
 a.btn-nav{font-family:inherit;font-size:.78rem;color:var(--dim);text-decoration:none;
@@ -87,7 +87,7 @@ a.btn-nav:hover{border-color:var(--accent);color:var(--accent)}
 a.btn-danger:hover{border-color:var(--danger);color:var(--danger)}
 
 /* layout */
-.page{max-width:480px;display:flex;flex-direction:column;gap:16px}
+.page{max-width:480px;display:flex;flex-direction:column;gap:16px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px}
 .card-title{font-size:.8rem;color:var(--accent);letter-spacing:.08em;
   text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;

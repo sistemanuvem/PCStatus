@@ -70,6 +70,7 @@ input:focus{border-color:var(--accent)}
 <body>
 <div class="login-box">
   <div class="logo">
+    <img src="icone.webp" alt="PC Status" style="width:60px;height:60px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto">
     <h1>PC Status Monitor</h1>
     <p>Monitoramento de sistemas</p>
   </div>
