@@ -97,6 +97,45 @@ h1{color:var(--accent);font-size:1.4rem;margin-bottom:0}
 #err{background:#2d1b1b;border:1px solid var(--danger);color:var(--danger);
   padding:12px;border-radius:6px;margin-bottom:16px;display:none}
 .c-ok{color:var(--ok)}.c-warn{color:var(--warn)}.c-danger{color:var(--danger)}.c-dim{color:var(--dim)}
+
+/* botao gerenciar */
+.tabs-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.tabs-label{font-size:.75rem;color:var(--dim)}
+.btn-manage{font-family:inherit;font-size:.75rem;color:var(--dim);background:none;
+  border:1px solid var(--border);border-radius:5px;padding:3px 10px;
+  cursor:pointer;transition:border-color .2s,color .2s;white-space:nowrap}
+.btn-manage:hover{border-color:var(--accent);color:var(--accent)}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);
+  display:none;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:24px;width:100%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;gap:0}
+.modal-head{display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.modal-head-title{color:var(--accent);font-size:.82rem;font-weight:bold;
+  letter-spacing:.08em;text-transform:uppercase}
+.modal-close{background:none;border:none;color:var(--dim);font-size:1.3rem;
+  cursor:pointer;line-height:1;padding:0 2px}
+.modal-close:hover{color:var(--text)}
+.modal-body{overflow-y:auto;flex:1}
+.pc-item{display:flex;align-items:center;justify-content:space-between;
+  padding:11px 0;border-bottom:1px solid var(--bar-bg)}
+.pc-item:last-child{border-bottom:none}
+.pc-item-info{display:flex;flex-direction:column;gap:2px}
+.pc-item-name{font-size:.85rem}
+.pc-item-status{font-size:.72rem;color:var(--dim)}
+.toggle{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-sl{position:absolute;inset:0;background:#30363d;border-radius:22px;
+  cursor:pointer;transition:background .2s}
+.toggle-sl:before{content:'';position:absolute;width:16px;height:16px;
+  left:3px;bottom:3px;background:white;border-radius:50%;transition:transform .2s}
+.toggle input:checked+.toggle-sl{background:var(--ok)}
+.toggle input:checked+.toggle-sl:before{transform:translateX(18px)}
+.modal-hint{font-size:.72rem;color:var(--dim);margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--border);line-height:1.5}
 </style>
 </head>
 <body>
@@ -113,7 +152,25 @@ h1{color:var(--accent);font-size:1.4rem;margin-bottom:0}
 <div id="err"></div>
 
 <!-- Abas de PC -->
+<div class="tabs-header">
+  <span class="tabs-label">PCs conectados</span>
+  <button class="btn-manage" onclick="openModal()">&#9881; Gerenciar</button>
+</div>
 <div id="pc-tabs"><p class="sub">Aguardando conexao de algum PC...</p></div>
+
+<!-- Modal gerenciar PCs -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-head-title">Gerenciar PCs</span>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modal-list">
+      <p class="sub">Nenhum PC conectado ainda.</p>
+    </div>
+    <p class="modal-hint">PCs desativados ficam ocultos no dashboard mas continuam enviando dados ao servidor.</p>
+  </div>
+</div>
 
 <!-- Conteudo do PC selecionado -->
 <div id="pc-content" style="display:none">
@@ -366,6 +423,90 @@ function renderPcData(data) {
             new Date(data.timestamp).toLocaleString('pt-BR');
 }
 
+// ── Gerenciar PCs (localStorage) ─────────────────────────────────────────────
+
+let disabledPcs = new Set(JSON.parse(localStorage.getItem('pcstatus_disabled') || '[]'));
+
+function saveDisabled() {
+    localStorage.setItem('pcstatus_disabled', JSON.stringify([...disabledPcs]));
+}
+
+function togglePcEnabled(name, enabled) {
+    if (enabled) disabledPcs.delete(name);
+    else         disabledPcs.add(name);
+    saveDisabled();
+    renderModal();
+    if (!enabled && selectedPc === name) {
+        selectedPc = null;
+        document.getElementById('pc-content').style.display = 'none';
+    }
+    renderTabs();
+}
+
+function openModal()  { renderModal(); document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function renderModal() {
+    const el  = document.getElementById('modal-list');
+    const pcs = Object.keys(allData);
+    if (!pcs.length) { el.innerHTML = '<p class="sub" style="padding:10px 0">Nenhum PC conectado ainda.</p>'; return; }
+    const now = Date.now();
+    el.innerHTML = pcs.map(name => {
+        const d       = allData[name];
+        const ts      = d.timestamp ? new Date(d.timestamp) : null;
+        const ageSec  = ts ? (now - ts.getTime()) / 1000 : 99999;
+        const online  = ageSec < STALE_SEC;
+        const enabled = !disabledPcs.has(name);
+        const sid     = 'tog-' + name.replace(/\W/g, '_');
+        const statusTxt = !ts ? 'sem dados'
+            : online ? 'online'
+            : `offline há ${Math.round(ageSec/60)} min`;
+        const statusCls = online ? 'c-ok' : 'c-danger';
+        return `<div class="pc-item">
+          <div class="pc-item-info">
+            <span class="pc-item-name">${esc(name)}</span>
+            <span class="pc-item-status ${enabled ? statusCls : 'c-dim'}">${enabled ? statusTxt : 'desativado'}</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="${sid}" ${enabled ? 'checked' : ''}
+              onchange="togglePcEnabled('${esc(name)}', this.checked)">
+            <span class="toggle-sl"></span>
+          </label>
+        </div>`;
+    }).join('');
+}
+
+// ── Notificações ──────────────────────────────────────────────────────────────
+
+const notifiedOffline = new Set();
+const NOTIFY_SEC = 600; // 10 minutos
+
+function initNotifications() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function checkNotifications() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const now = Date.now();
+    for (const [name, d] of Object.entries(allData)) {
+        if (disabledPcs.has(name)) continue;
+        const ts     = d.timestamp ? new Date(d.timestamp) : null;
+        const ageSec = ts ? (now - ts.getTime()) / 1000 : 99999;
+        if (ageSec > NOTIFY_SEC && !notifiedOffline.has(name)) {
+            notifiedOffline.add(name);
+            new Notification('PC offline: ' + name, {
+                body: 'Sem dados há mais de 10 minutos.',
+                icon: 'icone.webp',
+                tag:  'pcoffline-' + name,
+            });
+        } else if (ageSec < 60) {
+            notifiedOffline.delete(name); // voltou online
+        }
+    }
+}
+
 // ── Abas de PC ────────────────────────────────────────────────────────────────
 
 let allData    = {};
@@ -385,7 +526,7 @@ const STALE_SEC = 300; // 5 minutos
 function renderTabs() {
     const el  = document.getElementById('pc-tabs');
     const now = Date.now();
-    const pcs = Object.keys(allData);
+    const pcs = Object.keys(allData).filter(n => !disabledPcs.has(n));
 
     if (!pcs.length) {
         el.innerHTML = '<p class="sub">Aguardando conexao de algum PC...</p>';
@@ -441,11 +582,13 @@ async function refresh() {
         document.getElementById('err').style.display = 'none';
         allData = json.pcs ?? {};
 
-        // Seleciona o primeiro PC automaticamente se nenhum estiver selecionado
-        const pcs = Object.keys(allData);
+        checkNotifications();
+
+        // Seleciona o primeiro PC ativo automaticamente se nenhum estiver selecionado
+        const pcs = Object.keys(allData).filter(n => !disabledPcs.has(n));
         if (!selectedPc && pcs.length) selectedPc = pcs[0];
-        // Se o PC selecionado sumiu, troca para o primeiro disponivel
-        if (selectedPc && !allData[selectedPc]) selectedPc = pcs[0] ?? null;
+        // Se o PC selecionado sumiu ou foi desativado, troca para o primeiro disponivel
+        if (selectedPc && (!allData[selectedPc] || disabledPcs.has(selectedPc))) selectedPc = pcs[0] ?? null;
 
         renderTabs();
 
@@ -470,6 +613,7 @@ initGauge('gauge-mem', 'needle-mem', 'ptx-mem', 'stx-mem', 240);
 initGauge('gauge-dr',  'needle-dr',  'ptx-dr',  'stx-dr',  155);
 initGauge('gauge-dw',  'needle-dw',  'ptx-dw',  'stx-dw',  155);
 
+initNotifications();
 refresh();
 setInterval(refresh, 2000);
 </script>

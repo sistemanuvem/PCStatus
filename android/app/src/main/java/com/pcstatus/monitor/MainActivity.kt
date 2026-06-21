@@ -58,7 +58,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.webChromeClient = WebChromeClient()
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
+                request.grant(request.resources)
+            }
+        }
     }
 
     private fun loadConfiguredUrl() {
