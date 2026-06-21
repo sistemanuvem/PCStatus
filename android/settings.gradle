@@ -1,0 +1,2 @@
+rootProject.name = "PCStatus"
+include ':app'

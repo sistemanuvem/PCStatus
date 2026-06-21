@@ -1,0 +1,23 @@
+# Dados gerados em runtime
+data/*.json
+data/auth.json
+
+# Build do cliente Windows
+client/dist/
+client/build/
+client/__pycache__/
+client/*.spec
+
+# Build do Android
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# Certificados temporários
+/C:/cacerts
+c:/temp/wincerts/
+c:/temp/norton.cer
+
+# Sistema
+.DS_Store
+Thumbs.db
